@@ -23,6 +23,7 @@ android.ndk = 25b
 android.archs = arm64-v8a, armeabi-v7a
 p4a.branch = master
 android.gradle_build_tools_version = 8.1.1
+android.sdk_build_tools = 34.0.0
 android.sdk = 34
 
 # Logging
