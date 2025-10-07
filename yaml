@@ -38,12 +38,17 @@ jobs:
           restore-keys: |
             buildozer-${{ runner.os }}-
 
-      - name: Build debug APK
-        env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-        run: |
-          export PATH=$PATH:~/.local/bin
-          buildozer android debug
+      - - name: Build debug APK
+     env:
+       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+     run: |
+       export PATH=$PATH:~/.local/bin
+       # Force specific Android SDK build tools and accept licenses
+       yes | sdkmanager --licenses
+       yes | sdkmanager "platforms;android-34" "platform-tools" "build-tools;34.0.0"
+       export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+       export PATH=$ANDROID_HOME/build-tools/34.0.0:$PATH
+       buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
