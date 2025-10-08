@@ -15,7 +15,7 @@ android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
 android.accept_sdk_license = True
 
 # --- Android / toolchain versions ---
-android.api = 34
+android.api = 33
 android.minapi = 24
 android.ndk = 25b
 android.archs = arm64-v8a, armeabi-v7a
