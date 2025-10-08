@@ -6,12 +6,12 @@ source.dir = .
 source.include_exts = py,png,jpg,jpeg,txt,kv,ini,csv,json
 version = 0.1.0
 
-requirements = python3,kivy
+requirements = python3,kivy,android
 orientation = portrait
 fullscreen = 0
 
-# Storage & network (minimal for your Lite build)
-android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+# Storage & network (minimal for your Lite 
+android.permissions = internet
 android.accept_sdk_license = True
 
 # --- Android / toolchain versions ---
