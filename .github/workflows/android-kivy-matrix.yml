@@ -50,39 +50,40 @@ jobs:
           pip install Cython==0.29.37 virtualenv
           pip install buildozer==1.5.0
 
-      - - name: Install Android SDK / Build tools
-  run: |
-    mkdir -p ~/.buildozer/android/platform/android-sdk
-    cd ~/.buildozer/android/platform/android-sdk
-
-    # retry download if Google’s server times out
-    for i in 1 2 3; do
-      echo "Attempt $i to download SDK tools..."
-      wget -q --show-progress --tries=3 --timeout=30 \
-        https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip \
-        -O cmdtools.zip && break || sleep 15
-    done
-
-    if [ ! -f cmdtools.zip ]; then
-      echo "Download failed after 3 attempts"; exit 1
-    fi
-
-    unzip -q cmdtools.zip -d cmdline-tools || (echo "Unzip failed" && exit 1)
-
-    yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
-    yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
-      "platforms;android-33" \
-      "build-tools;34.0.0" \
-      "platform-tools"
-
-    echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
-    echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
-      - name: Select edition files
+      - name: Install Android SDK / Build tools
+        shell: bash
         run: |
-          cp "${{ matrix.main }}" main.py
-          cp "${{ matrix.spec }}" buildozer.spec
-          echo "Using main=${{ matrix.main }}, spec=${{ matrix.spec }}"
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          cd ~/.buildozer/android/platform/android-sdk
 
+          echo "Downloading Android command line tools..."
+          # retry download if Google's server times out
+          for i in {1..3}; do
+            echo "Attempt $i to download SDK tools..."
+            wget -q --show-progress --tries=3 --timeout=30 \
+              https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip \
+              -O cmdtools.zip && break || sleep 15
+          done
+
+          if [ ! -f cmdtools.zip ]; then
+            echo "Download failed after 3 attempts."
+            exit 1
+          fi
+
+          echo "Unzipping SDK tools..."
+          unzip -q cmdtools.zip -d cmdline-tools
+
+          echo "Accepting licenses..."
+          yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
+
+          echo "Installing Android 33 + build-tools..."
+          yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
+            "platforms;android-33" \
+            "build-tools;34.0.0" \
+            "platform-tools"
+
+          echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
+          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
       - name: Build debug APK
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
