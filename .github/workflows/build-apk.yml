@@ -1,12 +1,17 @@
-name: Build My Pocket POS (Lite)
+name: Build Android APK (Kivy/Buildozer)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "**.py"
+      - "**.kv"
+      - "buildozer.spec"
+      - ".github/workflows/android-kivy-build.yml"
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-22.04
 
     steps:
@@ -18,41 +23,51 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Set up Java (JDK 17)
-        uses: actions/setup-java@v4
+      - name: Install system deps (buildozer / android)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git zip unzip libffi-dev libssl-dev \
+            libsqlite3-dev libbz2-dev libreadline-dev zlib1g-dev \
+            openjdk-17-jdk python3-pip python3-venv \
+            libncurses5 libtinfo5 liblzma-dev
+
+      - name: Python deps (buildozer + Cython)
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install Cython==0.29.37 virtualenv
+          pip install buildozer==1.5.0
+
+      - name: Cache Android/Buildozer dirs
+        uses: actions/cache@v4
         with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platforms & tools
-        run: |
-          sdkmanager --install "platforms;android-33" "build-tools;33.0.2" "platform-tools" "ndk;25.1.8937393"
-          yes | sdkmanager --licenses
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install buildozer==1.5.0 Cython==0.29.36
+          path: |
+            ~/.buildozer
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
 
       - name: Build debug APK
         env:
-          ANDROIDSDK: ${{ env.ANDROID_SDK_ROOT }}
-          ANDROIDNDK: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.1.8937393
-          ANDROIDAPI: "33"
-          ANDROIDMINAPI: "24"
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
-          echo "Starting Buildozer build…"
-          buildozer android debug --verbose
+          # Clean previous builds to avoid stale artifacts
+          rm -rf bin .buildozer/android/platform/build-* || true
+          buildozer android debug
 
-      - name: Upload APK
-        if: success() || failure()
+      - name: Find APK
+        id: findapk
+        run: |
+          APK="$(ls -1 bin/*.apk | head -n 1)"
+          echo "apk=$APK" >> $GITHUB_OUTPUT
+          ls -l bin || true
+
+      - name: Upload APK artifact
+        if: steps.findapk.outputs.apk != ''
         uses: actions/upload-artifact@v4
         with:
-          name: MyPocketPOSLite-debug
-          path: |
-            bin/*.apk
-            bin/*.aab
-          if-no-files-found: warn
+          name: MyPocketPOS-debug-apk
+          path: ${{ steps.findapk.outputs.apk }}
+          retention-days: 7
