@@ -27,18 +27,33 @@ from kivy.uix.behaviors import ButtonBehavior
 Window.softinput_mode = "below_target"
 
 # ------------------------------- Paths ---------------------------------
+# -------------------- Safe Android storage --------------------
+import os
+from pathlib import Path
+from kivy.utils import platform
 
-HOME = "/storage/emulated/0"
-APP_ROOT = os.path.join(HOME, "projects", "My Pocket Pos")
-APP_DIR = os.path.join(APP_ROOT, "App")
-IMPORT_DIR = os.path.join(APP_DIR, "imports")   # CSV & license.txt go here
-os.makedirs(APP_DIR, exist_ok=True)
-os.makedirs(IMPORT_DIR, exist_ok=True)
+def get_base_dir():
+    """Return an app-private, writeable directory on Android or desktop."""
+    if platform == "android":
+        try:
+            from android.storage import app_storage_path
+            return app_storage_path()  # /storage/emulated/0/Android/data/<package>/files
+        except Exception:
+            pass
+    return str(Path.home() / ".mypocketpos")
 
-INV_JSON   = os.path.join(APP_DIR, "inventory.json")
-SALES_JSON = os.path.join(APP_DIR, "sales_log.json")
-UP_JSON    = os.path.join(APP_DIR, "upgrades.json")
+BASE = get_base_dir()
+APP_DIR = os.path.join(BASE, "App")
+IMPORT_DIR = os.path.join(APP_DIR, "imports")
+
+INV_JSON    = os.path.join(APP_DIR, "inventory.json")
+SALES_JSON  = os.path.join(APP_DIR, "sales_log.json")
+UP_JSON     = os.path.join(APP_DIR, "upgrades.json")
 LICENSE_TXT = os.path.join(IMPORT_DIR, "license.txt")
+
+def ensure_dirs():
+    for p in (APP_DIR, IMPORT_DIR):
+        os.makedirs(p, exist_ok=True)
 
 # ------------------------------ Helpers --------------------------------
 
