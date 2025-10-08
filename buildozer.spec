@@ -1,6 +1,5 @@
 [app]
-[app]
-title = POS
+title = My Pocket POS
 package.name = pocketpos
 package.domain = org.pocketpos
 source.dir = .
@@ -11,10 +10,11 @@ requirements = python3,kivy
 orientation = portrait
 fullscreen = 0
 
+# Storage & network (minimal for your Lite build)
 android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
 android.accept_sdk_license = True
 
-# Modern Android / toolchain versions
+# --- Android / toolchain versions ---
 android.api = 34
 android.minapi = 24
 android.ndk = 25b
