@@ -1,4 +1,4 @@
-name: Build Android APK (Kivy/Buildozer)
+name: android-kivy-build.yml
 
 on:
   workflow_dispatch:
