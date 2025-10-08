@@ -1,21 +1,64 @@
-- - name: Build debug APK
+name: Build My Pocket POS (Lite)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git zip unzip \
+            autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev zlib1g-dev \
+            libbz2-dev libreadline-dev libsqlite3-dev
+
+      - name: Install Android SDK + API 34 + build-tools 34.0.0
         env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-          ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           set -e
-          export PATH=$PATH:~/.local/bin
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          sudo mkdir -p $ANDROID_HOME
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdtools.zip
+          sudo unzip -q cmdtools.zip -d $ANDROID_HOME
+          sudo mkdir -p $ANDROID_HOME/cmdline-tools/latest
+          sudo mv $ANDROID_HOME/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-          # 1) First run to initialize Buildozer
-          buildozer android debug || true
+      - name: Install buildozer and deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install "cython<3" buildozer==1.5.0
 
-          # 2) Accept licenses and install correct build-tools
-          SDKMAN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMAN" --licenses
-          yes | "$SDKMAN" "platforms;android-34" "platform-tools" "build-tools;34.0.0"
+      - name: Build debug APK
+        run: buildozer -v android debug
 
-          # 3) Force PATH to correct version
-          export PATH="$ANDROID_SDK_ROOT/build-tools/34.0.0:$PATH"
-
-          # 4) Run final build
-          buildozer android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyPocketPOSLite-debug
+          path: bin/*.apk
