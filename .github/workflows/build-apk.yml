@@ -23,6 +23,14 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
+       - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git zip unzip \
+            autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev zlib1g-dev \
+            libbz2-dev libreadline-dev libsqlite3-dev
 
       - name: Install Android SDK + API 33 + build-tools 34.0.0
         run: |
