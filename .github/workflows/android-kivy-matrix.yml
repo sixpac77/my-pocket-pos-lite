@@ -50,20 +50,33 @@ jobs:
           pip install Cython==0.29.37 virtualenv
           pip install buildozer==1.5.0
 
-      - name: Install Android SDK / Build tools
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          cd ~/.buildozer/android/platform/android-sdk
-          wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdtools.zip
-          unzip cmdtools.zip -d cmdline-tools
-          yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
-          yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
-            "platforms;android-33" \
-            "build-tools;34.0.0" \
-            "platform-tools"
-          echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
-          echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
+      - - name: Install Android SDK / Build tools
+  run: |
+    mkdir -p ~/.buildozer/android/platform/android-sdk
+    cd ~/.buildozer/android/platform/android-sdk
 
+    # retry download if Google’s server times out
+    for i in 1 2 3; do
+      echo "Attempt $i to download SDK tools..."
+      wget -q --show-progress --tries=3 --timeout=30 \
+        https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip \
+        -O cmdtools.zip && break || sleep 15
+    done
+
+    if [ ! -f cmdtools.zip ]; then
+      echo "Download failed after 3 attempts"; exit 1
+    fi
+
+    unzip -q cmdtools.zip -d cmdline-tools || (echo "Unzip failed" && exit 1)
+
+    yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
+    yes | cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
+      "platforms;android-33" \
+      "build-tools;34.0.0" \
+      "platform-tools"
+
+    echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
+    echo "$HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
       - name: Select edition files
         run: |
           cp "${{ matrix.main }}" main.py
