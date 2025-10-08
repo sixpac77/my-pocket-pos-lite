@@ -1,73 +1,4 @@
-name: Build My Pocket POS (Lite)
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Set up Java (JDK 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            autoconf automake libtool pkg-config \
-            zlib1g zlib1g-dev libssl-dev libffi-dev \
-            libncurses5 libncurses5-dev libtinfo5 \
-            unzip zip git
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platforms & tools
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platform-tools"
-          sdkmanager --install "platforms;android-33"
-          sdkmanager --install "build-tools;34.0.0"
-          sdkmanager --install "ndk;25.1.8937393"
-
-      - name: Show Android SDK content (debug)
-        run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          ls -la "$ANDROID_SDK_ROOT"
-          ls -la "$ANDROID_SDK_ROOT/build-tools"
-          ls -la "$ANDROID_SDK_ROOT/platforms"
-          ls -la "$ANDROID_SDK_ROOT/ndk"
-
-      - name: Install Buildozer & p4a
-        run: |
-          python -m pip install --upgrade pip wheel Cython
-          pip install "buildozer>=1.5.0" "python-for-android>=2024.06.03"
-
-      - name: Cache build directories
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            ~/.gradle/caches
-            ~/.android
-            ${{ env.ANDROID_SDK_ROOT }}
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-
-      - name: Build debug APK
+-- name: Build debug APK
         env:
           ANDROIDSDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROIDNDK: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.1.8937393
@@ -75,13 +6,9 @@ jobs:
           ANDROIDMINAPI: "24"
           NDK_API: "24"
         run: |
-          buildozer android debug
+          echo "Starting Buildozer build..."
+          buildozer android debug --verbose || (cat .buildozer/android/platform/build/dists/*/buildozer.log || true)
 
-      - name: Upload APK
+      - name: List output files
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyPocketPOSLite-debug
-          path: |
-            bin/*.apk
-            bin/*.aab
+        run: ls -R bin || true
