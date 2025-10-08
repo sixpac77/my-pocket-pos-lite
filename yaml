@@ -8,6 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Make sdk installs non-interactive for Buildozer
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+      DEBIAN_FRONTEND: noninteractive
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,37 +33,30 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential git zip unzip \
-            autoconf automake libtool pkg-config \
-            libffi-dev libssl-dev zlib1g-dev \
-            libbz2-dev libreadline-dev libsqlite3-dev
+            zip unzip autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev libffi-dev
 
-      - name: Install Android SDK + API 34 + build-tools 34.0.0
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-        run: |
-          set -e
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          sudo mkdir -p $ANDROID_HOME
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdtools.zip
-          sudo unzip -q cmdtools.zip -d $ANDROID_HOME
-          sudo mkdir -p $ANDROID_HOME/cmdline-tools/latest
-          sudo mv $ANDROID_HOME/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ || true
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Install buildozer and deps
+      - name: Install Buildozer & tools
         run: |
           python -m pip install --upgrade pip
-          pip install "cython<3" buildozer==1.5.0
+          pip install cython==0.29.36 buildozer
+
+      - name: Cache .buildozer
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-${{ runner.os }}-
 
       - name: Build debug APK
-        run: buildozer -v android debug
+        run: |
+          # Buildozer reads android.api / minapi from buildozer.spec
+          # and will install the matching SDK packages automatically.
+          buildozer android debug
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MyPocketPOSLite-debug
