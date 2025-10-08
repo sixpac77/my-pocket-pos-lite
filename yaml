@@ -1,4 +1,4 @@
-- name: Build debug APK
+- - name: Build debug APK
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
           ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
@@ -6,16 +6,16 @@
           set -e
           export PATH=$PATH:~/.local/bin
 
-          # 1) First run bootstraps the SDK/cmdline-tools inside .buildozer (may fail; that's OK)
+          # 1) First run to initialize Buildozer
           buildozer android debug || true
 
-          # 2) Accept licenses + install EXACT tools into Buildozer's SDK path
+          # 2) Accept licenses and install correct build-tools
           SDKMAN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMAN" --licenses
           yes | "$SDKMAN" "platforms;android-34" "platform-tools" "build-tools;34.0.0"
 
-          # 3) Force PATH to our pinned build-tools
+          # 3) Force PATH to correct version
           export PATH="$ANDROID_SDK_ROOT/build-tools/34.0.0:$PATH"
 
-          # 4) Real build (now aidl is available and 36.1 won't be requested)
+          # 4) Run final build
           buildozer android debug
